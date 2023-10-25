@@ -1,8 +1,3 @@
-variable "dns_service_name" {
-  type = string
-  default = "www"
-}
-
 variable "env" {
   type = string
   default = "dev"
@@ -11,4 +6,16 @@ variable "env" {
 variable "feature" {
   type = string
   default = "master"
+}
+
+variable "context" {
+  type = any
+}
+
+variable "config" {
+  type = any
+}
+
+variable "tags" {
+  type = any
 }

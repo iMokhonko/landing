@@ -1,6 +1,6 @@
 <template>
   <div class="hello">
-    <h1>СВЕТА, САНЯ, ВІОЛА, АНЯ, СЕРГІЙ, ПРІВЄТ, ПЄШКІ!</h1>
+    <h1>HELLO WORLD!</h1>
   </div>
 </template>
 

@@ -17,7 +17,7 @@ resource "aws_cloudfront_origin_access_control" "access_control_origin" {
 # Create cloudfront distribution for master feature
 resource "aws_cloudfront_distribution" "master_feature_distribution" {
   origin {
-    domain_name = var.context.s3.s3_bucket_bucket_domain_name
+    domain_name = module.s3_bucket.s3_bucket_bucket_domain_name
     origin_access_control_id = aws_cloudfront_origin_access_control.access_control_origin.id
     origin_id                = "${local.master_dns_record} distribution id"
     origin_path              = "/master" 
@@ -62,7 +62,7 @@ resource "aws_cloudfront_distribution" "master_feature_distribution" {
   }
 
   viewer_certificate {
-    acm_certificate_arn = var.context.dns.acm_master_certificate_arn
+    acm_certificate_arn = aws_acm_certificate.master_certificate.arn
     
     ssl_support_method = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
@@ -76,7 +76,7 @@ resource "aws_cloudfront_distribution" "features_distribution" {
   count = var.env != "prod" ? 1 : 0
 
   origin {
-    domain_name = var.context.s3.s3_bucket_bucket_domain_name
+    domain_name = module.s3_bucket.s3_bucket_bucket_domain_name
     origin_access_control_id = aws_cloudfront_origin_access_control.access_control_origin.id
     origin_id                = "${local.master_dns_record} distribution id"
     origin_path              = "" 
@@ -118,7 +118,7 @@ resource "aws_cloudfront_distribution" "features_distribution" {
   }
 
   viewer_certificate {
-    acm_certificate_arn = var.context.dns.acm_features_certificate_arn
+    acm_certificate_arn = aws_acm_certificate.features_certificate[0].arn
     
     ssl_support_method = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
@@ -132,7 +132,7 @@ resource "aws_cloudfront_distribution" "zone_apex_distribution" {
   count = var.env != "prod" ? 0 : 1 # only for prod
 
   origin {
-    domain_name              = var.context.s3.s3_bucket_bucket_domain_name
+    domain_name              = module.s3_bucket.s3_bucket_bucket_domain_name
     origin_access_control_id = aws_cloudfront_origin_access_control.access_control_origin.id
     origin_id                = "${local.master_dns_record} distribution id"
     origin_path              = "/master" 
@@ -177,7 +177,7 @@ resource "aws_cloudfront_distribution" "zone_apex_distribution" {
   }
 
   viewer_certificate {
-    acm_certificate_arn = var.context.dns.acm_zone_apex_certificate_arn
+    acm_certificate_arn = aws_acm_certificate.zone_apex_certificate[0].arn
     
     ssl_support_method = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
@@ -188,7 +188,7 @@ resource "aws_cloudfront_distribution" "zone_apex_distribution" {
 
 # create distribution alias record for master feature
 resource "aws_route53_record" "distribution_alias_record" {
-  zone_id = var.context.dns.route53_zone_id
+  zone_id = data.aws_route53_zone.primary.id
   name    = local.master_dns_record
   type    = "A"
 
@@ -203,7 +203,7 @@ resource "aws_route53_record" "distribution_alias_record" {
 resource "aws_route53_record" "zone_apex_alias_record" {
   count = var.env != "prod" ? 0 : 1
 
-  zone_id = var.context.dns.route53_zone_id
+  zone_id = data.aws_route53_zone.primary.id
   name    = ""
   type    = "A"
 
@@ -218,7 +218,7 @@ resource "aws_route53_record" "zone_apex_alias_record" {
 resource "aws_route53_record" "distribution_features_alias_record" {
   count = var.env != "prod" ? 1 : 0
 
-  zone_id = var.context.dns.route53_zone_id
+  zone_id = data.aws_route53_zone.primary.id
   name    = local.features_dns_record
   type    = "A"
 
@@ -231,7 +231,7 @@ resource "aws_route53_record" "distribution_features_alias_record" {
 
 # Attach policy to S3 bucket in order to allow distributions to get objects from it
 resource "aws_s3_bucket_policy" "allow_access_from_another_account" {
-  bucket = var.context.s3.s3_bucket_name
+  bucket = module.s3_bucket.s3_bucket_id
   policy = data.aws_iam_policy_document.allow_access_from_cloudfront_distribution.json
 }
 
@@ -245,7 +245,7 @@ data "aws_iam_policy_document" "allow_access_from_cloudfront_distribution" {
 
     actions = ["s3:GetObject"]
 
-    resources = ["${var.context.s3.s3_bucket_arn}/*"]
+    resources = ["${module.s3_bucket.s3_bucket_arn}/*"]
 
     condition {
       test     = "StringLike"
